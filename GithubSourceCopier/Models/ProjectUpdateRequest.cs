@@ -6,4 +6,5 @@ public class ProjectUpdateRequest
     public string LocalPath { get; set; }
     public string OldVersion { get; set; }
     public string NewVersion { get; set; }
+    public string TargetNamespace { get; set; }
 }

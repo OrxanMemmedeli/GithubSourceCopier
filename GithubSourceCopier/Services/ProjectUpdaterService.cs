@@ -12,47 +12,73 @@ public class ProjectUpdaterService : IProjectUpdaterService
         _httpClient = httpClient;
     }
 
-    public async Task DownloadAndCopyFilesAsync(string githubUrl, string localPath, string oldVersion, string newVersion)
+    public async IAsyncEnumerable<string> DownloadAndCopyFilesAsync(string githubUrl, string localPath, string oldVersion, string newVersion, string targetNamespace)
     {
+        var addedFiles = new List<string>();
+
+        // GitHub URL-ni API formatına uyğunlaşdırırıq
+        var apiUrl = githubUrl
+            .Replace("github.com", "api.github.com/repos") // github.com -> api.github.com/repos
+            .Replace("/tree/master/", "/contents/");       // tree/master -> contents
+
         // Ana qovluq üçün rekursiv oxuma prosesini başladırıq
-        await ProcessDirectoryAsync(githubUrl, localPath, oldVersion, newVersion);
+        await foreach (var filePath in ProcessDirectoryAsync(apiUrl, localPath, oldVersion, newVersion, targetNamespace))
+        {
+            yield return filePath; // Hər faylı dərhal qaytarırıq
+        }
     }
 
-    private async Task ProcessDirectoryAsync(string apiUrl, string localPath, string oldVersion, string newVersion)
+    private async IAsyncEnumerable<string> ProcessDirectoryAsync(string apiUrl, string localPath, string oldVersion, string newVersion, string targetNamespace)
     {
-        // GitHub API-dən qovluğun məzmununu çəkirik
+        _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("request");
+
         var response = await _httpClient.GetAsync(apiUrl);
-        response.EnsureSuccessStatusCode();
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new Exception($"GitHub-dan məlumatları əldə etmək alınmadı: {response.StatusCode} - {response.ReasonPhrase}");
+        }
 
         var content = await response.Content.ReadAsStringAsync();
+
+
         var files = JsonSerializer.Deserialize<IEnumerable<GithubFile>>(content);
 
-        foreach (var file in files)
+        var withoutCLFile = files.Where(x => !x.Name.EndsWith(".csproj"));
+        foreach (var file in withoutCLFile)
         {
             if (file.Type == "file" && file.DownloadUrl != null)
             {
-                // Əgər obyekt fayldırsa, faylı endiririk
                 var fileContent = await DownloadFileContentAsync(file);
 
                 // Versiya uyğunluğunu təmin etmək üçün məzmunu dəyişirik
                 fileContent = UpdateVersionCompatibility(fileContent, oldVersion, newVersion);
 
+                // Faylın namespace hissəsini yeniləyirik
+                var updatedNamespace = GenerateNamespace(localPath, targetNamespace);
+                fileContent = UpdateNamespace(fileContent, updatedNamespace);
+
                 // Faylı yerli qovluqda saxlayırıq
                 var destinationPath = Path.Combine(localPath, file.Name);
-                Directory.CreateDirectory(Path.GetDirectoryName(destinationPath) ?? string.Empty); // Qovluqları yaradırıq
+                Directory.CreateDirectory(Path.GetDirectoryName(destinationPath) ?? string.Empty);
                 await File.WriteAllTextAsync(destinationPath, fileContent);
+
+                yield return destinationPath; // Faylın yolunu dərhal qaytarırıq
             }
             else if (file.Type == "dir" && file.Url != null)
             {
-                // Əgər obyekt qovluqdursa, həmin qovluğu yerli olaraq yaradıb içini rekursiv şəkildə oxuyuruq
                 var subDirectoryPath = Path.Combine(localPath, file.Name);
-                Directory.CreateDirectory(subDirectoryPath); // Yerli qovluq yaradırıq
+                Directory.CreateDirectory(subDirectoryPath);
 
-                // Alt qovluğun məzmununu oxumaq üçün rekursiv çağırış
-                await ProcessDirectoryAsync(file.Url, subDirectoryPath, oldVersion, newVersion);
+                await foreach (var subFilePath in ProcessDirectoryAsync(file.Url, subDirectoryPath, oldVersion, newVersion, targetNamespace))
+                {
+                    yield return subFilePath; // Alt qovluq fayllarını da dərhal qaytarırıq
+                }
             }
         }
+
     }
+
 
     private async Task<string> DownloadFileContentAsync(GithubFile file)
     {
@@ -63,25 +89,31 @@ public class ProjectUpdaterService : IProjectUpdaterService
 
     private string UpdateVersionCompatibility(string content, string oldVersion, string newVersion)
     {
-        // Kodun köhnə versiyasını yeni versiyaya uyğunlaşdırmaq üçün dəyişikliklər
         return content.Replace(oldVersion, newVersion);
     }
 
-    private async Task<IEnumerable<GithubFile>> GetFilesFromGithub(string githubUrl)
+    private string UpdateNamespace(string content, string targetNamespace)
     {
-        // GitHub URL-ni API formatına uyğunlaşdırırıq
-        var apiUrl = githubUrl
-            .Replace("github.com", "api.github.com/repos")
-            .Replace("/tree/master/", "/contents/");
+        var namespaceLine = "namespace ";
+        var startIndex = content.IndexOf(namespaceLine);
 
-        _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("request");
+        if (startIndex >= 0)
+        {
+            var endIndex = content.IndexOf("\n", startIndex);
+            content = content.Remove(startIndex, endIndex - startIndex).Insert(startIndex, $"{namespaceLine}{targetNamespace};");
+        }
 
-        var response = await _httpClient.GetAsync(apiUrl);
-
-        if (!response.IsSuccessStatusCode)
-            throw new Exception($"GitHub-dan məlumatları əldə etmək alınmadı: {response.StatusCode} - {response.ReasonPhrase}");
-
-        var content = await response.Content.ReadAsStringAsync();
-        return JsonSerializer.Deserialize<IEnumerable<GithubFile>>(content);
+        return content;
     }
+
+    private string GenerateNamespace(string localPath, string targetNamespace)
+    {
+        // `Entities` qovluğunu tapırıq və yalnız ondan sonrakı yolu namespace kimi istifadə edirik
+        var entitiesIndex = localPath.IndexOf("Entities", StringComparison.OrdinalIgnoreCase);
+        var relativePath = entitiesIndex >= 0 ? localPath[(entitiesIndex + "Entities".Length)..].Trim(Path.DirectorySeparatorChar) : string.Empty;
+
+        relativePath = relativePath.Replace(Path.DirectorySeparatorChar, '.');
+        return $"{targetNamespace}.Entities{(string.IsNullOrEmpty(relativePath) ? string.Empty : "." + relativePath)}";
+    }
+
 }

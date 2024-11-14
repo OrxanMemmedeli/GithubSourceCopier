@@ -2,5 +2,5 @@
 
 public interface IProjectUpdaterService
 {
-    Task DownloadAndCopyFilesAsync(string githubUrl, string localPath, string oldVersion, string newVersion);
+    IAsyncEnumerable<string> DownloadAndCopyFilesAsync(string githubUrl, string localPath, string oldVersion, string newVersion, string targetNamespace);
 }

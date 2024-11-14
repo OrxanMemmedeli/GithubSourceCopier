@@ -26,8 +26,19 @@ namespace GithubSourceCopier.Controllers
 
             try
             {
-                await _projectUpdaterService.DownloadAndCopyFilesAsync(request.GitHubLink, request.LocalPath, request.OldVersion, request.NewVersion);
-                return Ok("Fayllar uğurla kopyalandı.");
+                List<string> strings = new List<string>();
+                await foreach (var addedFile in _projectUpdaterService.DownloadAndCopyFilesAsync(
+                                    request.GitHubLink,
+                                    request.LocalPath,
+                                    request.OldVersion,
+                                    request.NewVersion,
+                                    request.TargetNamespace))
+                {
+                    strings.Add(addedFile);
+                    Console.WriteLine($"Əlavə edilən fayl: {addedFile}");
+                }
+
+                return Ok(strings);
             }
             catch (Exception ex)
             {
