@@ -1,0 +1,6 @@
+@GithubSourceCopier_HostAddress = http://localhost:5262
+
+GET {{GithubSourceCopier_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
