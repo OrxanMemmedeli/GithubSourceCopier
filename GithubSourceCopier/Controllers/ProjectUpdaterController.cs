@@ -9,41 +9,41 @@ namespace GithubSourceCopier.Controllers
     [ApiController]
     public class ProjectUpdaterController : ControllerBase
     {
-        private readonly IProjectUpdaterService _projectUpdaterService;
+        //private readonly IProjectUpdaterService _projectUpdaterService;
 
-        public ProjectUpdaterController(IProjectUpdaterService projectUpdaterService)
-        {
-            _projectUpdaterService = projectUpdaterService;
-        }
+        //public ProjectUpdaterController(IProjectUpdaterService projectUpdaterService)
+        //{
+        //    _projectUpdaterService = projectUpdaterService;
+        //}
 
-        [HttpPost("update-project")]
-        public async Task<IActionResult> UpdateProject([FromBody] ProjectUpdateRequest request)
-        {
-            if (string.IsNullOrWhiteSpace(request.GitHubLink) || string.IsNullOrWhiteSpace(request.LocalPath))
-            {
-                return BadRequest("GitHub linki və lokal yol tələb olunur.");
-            }
+        //[HttpPost("update-project")]
+        //public async Task<IActionResult> UpdateProject([FromBody] ProjectUpdateRequest request)
+        //{
+        //    if (string.IsNullOrWhiteSpace(request.GitHubLink) || string.IsNullOrWhiteSpace(request.LocalPath))
+        //    {
+        //        return BadRequest("GitHub linki və lokal yol tələb olunur.");
+        //    }
 
-            try
-            {
-                List<string> strings = new List<string>();
-                await foreach (var addedFile in _projectUpdaterService.DownloadAndCopyFilesAsync(
-                                    request.GitHubLink,
-                                    request.LocalPath,
-                                    request.OldVersion,
-                                    request.NewVersion,
-                                    request.TargetNamespace))
-                {
-                    strings.Add(addedFile);
-                    Console.WriteLine($"Əlavə edilən fayl: {addedFile}");
-                }
+        //    try
+        //    {
+        //        List<string> strings = new List<string>();
+        //        await foreach (var addedFile in _projectUpdaterService.DownloadAndCopyFilesAsync(
+        //                            request.GitHubLink,
+        //                            request.LocalPath,
+        //                            request.OldVersion,
+        //                            request.NewVersion,
+        //                            request.TargetNamespace))
+        //        {
+        //            strings.Add(addedFile);
+        //            Console.WriteLine($"Əlavə edilən fayl: {addedFile}");
+        //        }
 
-                return Ok(strings);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Xəta baş verdi: {ex.Message}");
-            }
-        }
+        //        return Ok(strings);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, $"Xəta baş verdi: {ex.Message}");
+        //    }
+        //}
     }
 }
