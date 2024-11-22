@@ -138,7 +138,7 @@ public class ProjectUpdaterService : IProjectUpdaterService
         if (startIndex >= 0)
         {
             var endIndex = content.IndexOf("\n", startIndex);
-            content = content.Remove(startIndex, endIndex - startIndex).Insert(startIndex, $"{namespaceLine}{targetNamespace};");
+            content = content.Remove(startIndex, endIndex - startIndex).Insert(startIndex, $"{namespaceLine}{targetNamespace}");
         }
 
         return content;

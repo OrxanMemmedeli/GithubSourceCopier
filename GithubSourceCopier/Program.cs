@@ -1,4 +1,7 @@
-﻿using GithubSourceCopier.Models;
+﻿using GithubSourceCopier.MapService.Endpoints;
+using GithubSourceCopier.MapService.Infrastructure.Configurations;
+using GithubSourceCopier.MapService.Infrastructure.Extensions;
+using GithubSourceCopier.Models;
 using GithubSourceCopier.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -7,6 +10,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IProjectUpdaterService, ProjectUpdaterService>();
+
+
+var neo4jConfig = builder.Configuration.GetSection("Neo4j").Get<Neo4jConfig>();
+builder.Services.AddGraphServices(neo4jConfig);
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
@@ -23,6 +30,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.MapCityEndpoints();
+app.MapPathEndpoints();
 
 app.MapPost("/api/project-updater/update-project", async (ProjectUpdateRequest request, IProjectUpdaterService projectUpdaterService) =>
 {
