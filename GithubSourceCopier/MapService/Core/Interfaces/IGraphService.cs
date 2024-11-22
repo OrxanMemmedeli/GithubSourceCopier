@@ -3,13 +3,11 @@
 namespace GithubSourceCopier.MapService.Core.Interfaces;
 
 /// <summary>
-/// Provides methods for managing cities and their connections in a graph database.
+/// Provides methods for managing cities and their connections using API requests.
 /// </summary>
 public interface IGraphService
 {
-    Task AddCityAsync(CityModel city);
-    Task<IEnumerable<CityModel>> GetCitiesAsync(string filter);
-    Task AddPathAsync(PathModel path);
-    Task<IEnumerable<PathModel>> GetPathsAsync(string source, string destination);
+    Task<CityModel> GetCityAsync(string cityName);
+    Task<IEnumerable<CityModel>> SearchCitiesAsync(string filter);
 }
 

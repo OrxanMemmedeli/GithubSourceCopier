@@ -12,12 +12,25 @@ builder.Services.AddHttpClient();
 builder.Services.AddScoped<IProjectUpdaterService, ProjectUpdaterService>();
 
 
-var neo4jConfig = builder.Configuration.GetSection("Neo4j").Get<Neo4jConfig>();
-builder.Services.AddGraphServices(neo4jConfig);
+builder.Services.AddGraphServices();
+
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.EnableAnnotations(); // Anotasiya dəstəyi aktiv edilir
+});
+
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
 
 var app = builder.Build();
 
@@ -29,6 +42,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseCors();
 
 app.MapCityEndpoints();
 app.MapPathEndpoints();

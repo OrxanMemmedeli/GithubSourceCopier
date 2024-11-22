@@ -1,0 +1,112 @@
+﻿------------------------------------------------   GPT   ---------------------------------------------------
+
+Xəritə Vizualizasiyası Üçün HTML və CSS
+
+Endpointdən alınan JSON məlumatlarını xəritədə göstərmək üçün aşağıdakı kimi frontend kodu istifadə edə bilərsiniz:
+HTML
+
+            <div id="map" style="width: 100%; height: 500px;"></div>
+
+JavaScript (Google Maps və ya Leaflet ilə)
+
+            function loadMap(routeData) {
+                var map = new google.maps.Map(document.getElementById('map'), {
+                    center: { lat: routeData.MapConfig.Center.Latitude, lng: routeData.MapConfig.Center.Longitude },
+                    zoom: routeData.MapConfig.Zoom
+                });
+
+                var routePath = new google.maps.Polyline({
+                    path: routeData.Coordinates.map(coord => ({ lat: coord.Latitude, lng: coord.Longitude })),
+                    geodesic: true,
+                    strokeColor: '#FF0000',
+                    strokeOpacity: 1.0,
+                    strokeWeight: 2
+                });
+
+                routePath.setMap(map);
+            }
+
+API-dən Məlumat Çəkilməsi
+
+            fetch('/path/details-html?origin=Bakı, Yasamal, 20 yanvar metrosu&destination=Oğuz rayonu Padar kəndi')
+                .then(response => response.json())
+                .then(data => loadMap(data))
+                .catch(error => console.error('Error:', error));
+
+
+------------------------------------------------   Gizli Kod    ---------------------------------------------------
+
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDIdNDh9o3JvMuAyGgEzf0bZiV_DtljyV4" async defer></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css" integrity="sha512-+4zCK9k+qNFUR5X+cKL9EIR+ZOhtIloNl9GIKS57V1MyNsYpYcUrUeQc9vNfzsWfV28IaLL3i96P9sdNyeRssA==" crossorigin="anonymous" />
+
+    <script>
+        function onSuccess() {
+            $("#formModal").modal("hide");
+            dtGrid.reload();
+        }
+    </script>
+
+    <script>
+        function onRowSelectionChanged(e) {
+            var selectedRows = e.data;
+
+            showMap(selectedRows.Longitude, selectedRows.Latitude, selectedRows.ProductId);
+        };
+        function OnRowPrepared(e) {
+            if (e.data != undefined && e.data != null) {
+
+                var selectedRows = e.data;
+
+                if (selectedRows.FilePath != undefined && selectedRows.FilePath != null && selectedRows.FilePath != "") {
+                    if (e.cells.filter(x => x.columnIndex == 3) && e.cells.filter(x => x.columnIndex == 3)[0].cellElement) {
+                        $(e.cells.filter(x => x.columnIndex == 3)[0].cellElement[0]).html(<button type="button" onclick="openImage('${selectedRows.ProductId}')"><i class='fas fa-eye'></i></button>);
+                    }
+                }
+            }
+        };
+
+        function openImage(id) {
+            window.open('/EAQTA/DrawAndSend/ShowImage/' + id);
+        }
+
+    </script>
+
+    <script>
+        function showMap(longitude, latitude, productId) {
+            var mapOptions = {
+                center: new google.maps.LatLng(latitude, longitude),
+                zoom: 11
+            };
+            var map = new google.maps.Map(document.getElementById("mapContainer"), mapOptions);
+
+            // Add a red pin at the specified location
+            var marker = new google.maps.Marker({
+                position: mapOptions.center,
+                map: map,
+                icon: "http://maps.google.com/mapfiles/ms/icons/red-dot.png"
+            });
+
+            // Add an info window with an image to the map
+            var infoWindow = new google.maps.InfoWindow({
+                content: '<img src="/EAQTA/DrawAndSend/ShowImage/' + productId + '" style="width: 300px; height: auto;"/>'
+            });
+
+            infoWindow.open(map, marker);
+        }
+    </script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

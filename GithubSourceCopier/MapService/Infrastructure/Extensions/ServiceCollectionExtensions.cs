@@ -8,11 +8,20 @@ namespace GithubSourceCopier.MapService.Infrastructure.Extensions;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddGraphServices(this IServiceCollection services, Neo4jConfig config)
+    public static IServiceCollection AddGraphServices(this IServiceCollection services)
     {
-        services.AddSingleton(GraphDatabase.Driver(config.Uri, AuthTokens.Basic(config.Username, config.Password)));
-        services.AddScoped<IGraphService, GraphService>();
-        services.AddScoped<IPathFindingService, PathFindingService>();
+
+        // GraphService üçün HttpClient əlavə edilir
+        services.AddHttpClient<IGraphService, GraphService>();
+
+
+        //services.AddHttpClient<IPathFindingService, PathFindingService>()
+        //          .AddTypedClient(httpClient => new PathFindingService(httpClient, googleMapsApiKey));
+
+
+        services.AddHttpClient<IPathFindingService, PathFindingService>();
+
+
         return services;
     }
 }

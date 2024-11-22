@@ -1,60 +1,82 @@
 ﻿using GithubSourceCopier.MapService.Core.Interfaces;
 using GithubSourceCopier.MapService.Core.Models;
 using Neo4j.Driver;
+using System.Net.Http.Headers;
 
 namespace GithubSourceCopier.MapService.Core.Services;
 
 /// <summary>
-/// Manages cities and their connections using Neo4j.
+/// Manages city-related data using OpenStreetMap Overpass API.
 /// </summary>
 public class GraphService : IGraphService
 {
-    private readonly IDriver _driver;
+    private readonly HttpClient _httpClient;
 
-    public GraphService(IDriver driver)
+    public GraphService(HttpClient httpClient)
     {
-        _driver = driver;
+        _httpClient = httpClient;
+        _httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("MapService", "1.0"));
     }
 
-    public async Task AddCityAsync(CityModel city)
+    public async Task<CityModel> GetCityAsync(string cityName)
     {
-        using var session = _driver.AsyncSession();
-        await session.RunAsync("CREATE (c:City { Name: $name, Population: $population })",
-            new { name = city.Name, population = city.Population });
-    }
+        // API endpoint URL
+        var url = $"https://nominatim.openstreetmap.org/search?q={cityName}&format=json&limit=1";
 
-    public async Task<IEnumerable<CityModel>> GetCitiesAsync(string filter)
-    {
-        using var session = _driver.AsyncSession();
-        var result = await session.RunAsync("MATCH (c:City) WHERE c.Name CONTAINS $filter RETURN c",
-            new { filter });
-        return await result.ToListAsync(r => new CityModel
+        // API sorğusunu göndərmək
+        var response = await _httpClient.GetAsync(url);
+
+        // Uğursuz sorğular üçün istisna
+        if (!response.IsSuccessStatusCode)
+            throw new HttpRequestException($"API request failed with status code {response.StatusCode}");
+
+        // JSON cavabını deserializasiya
+        var cities = await response.Content.ReadFromJsonAsync<List<OpenStreetMapCityResponse>>();
+
+        // Heç bir nəticə tapılmadığı halda istisna
+        if (cities == null || cities.Count == 0)
+            throw new Exception($"No results found for city: {cityName}");
+
+        // İlk şəhəri götür və CityModel formatına çevir
+        var firstCity = cities.First();
+
+        return new CityModel
         {
-            Name = r["c"].As<INode>().Properties["Name"].As<string>(),
-            Population = r["c"].As<INode>().Properties["Population"].As<int>()
-        });
+            Name = firstCity.Display_name,
+            Latitude = double.Parse(firstCity.Lat),
+            Longitude = double.Parse(firstCity.Lon)
+        };
     }
 
-    public async Task AddPathAsync(PathModel path)
+    public async Task<IEnumerable<CityModel>> SearchCitiesAsync(string filter)
     {
-        using var session = _driver.AsyncSession();
-        await session.RunAsync(
-            "MATCH (a:City { Name: $source }), (b:City { Name: $destination }) " +
-            "CREATE (a)-[:CONNECTED { Distance: $distance }]->(b)",
-            new { source = path.Source, destination = path.Destination, distance = path.Distance });
-    }
+        // API endpoint URL
+        var url = $"https://nominatim.openstreetmap.org/search?q={filter}&format=json&limit=5";
 
-    public async Task<IEnumerable<PathModel>> GetPathsAsync(string source, string destination)
-    {
-        using var session = _driver.AsyncSession();
-        var result = await session.RunAsync(
-            "MATCH (a:City { Name: $source })-[r:CONNECTED]->(b:City { Name: $destination }) RETURN r",
-            new { source, destination });
-        return await result.ToListAsync(r => new PathModel
+        // API sorğusunu göndərmək
+        var response = await _httpClient.GetAsync(url);
+
+        // Uğursuz sorğular üçün istisna
+        if (!response.IsSuccessStatusCode)
         {
-            Source = source,
-            Destination = destination,
-            Distance = r["r"].As<IRelationship>().Properties["Distance"].As<double>()
+            throw new HttpRequestException($"API request failed with status code {response.StatusCode}");
+        }
+
+        // JSON cavabını deserializasiya
+        var cities = await response.Content.ReadFromJsonAsync<List<OpenStreetMapCityResponse>>();
+
+        // Nəticə tapılmadığı halda boş siyahı qaytarılır
+        if (cities == null || cities.Count == 0)
+        {
+            return Enumerable.Empty<CityModel>();
+        }
+
+        // JSON cavabını `CityModel` obyektlərinə çevir və qaytar
+        return cities.Select(city => new CityModel
+        {
+            Name = city.Display_name,
+            Latitude = double.Parse(city.Lat),
+            Longitude = double.Parse(city.Lon)
         });
     }
 }

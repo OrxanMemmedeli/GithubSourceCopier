@@ -1,10 +1,11 @@
 ﻿namespace GithubSourceCopier.MapService.Core.Models;
 
 /// <summary>
-/// Represents a city node in the graph.
+/// Represents city information obtained from API.
 /// </summary>
 public class CityModel
 {
     public string Name { get; set; }
-    public int Population { get; set; }
+    public double Latitude { get; set; }
+    public double Longitude { get; set; }
 }
