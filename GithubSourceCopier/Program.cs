@@ -1,4 +1,5 @@
-﻿using GithubSourceCopier.MapService.Endpoints;
+﻿using GithubSourceCopier.Endpoints;
+using GithubSourceCopier.MapService.Endpoints;
 using GithubSourceCopier.MapService.Infrastructure.Configurations;
 using GithubSourceCopier.MapService.Infrastructure.Extensions;
 using GithubSourceCopier.Models;
@@ -47,6 +48,7 @@ app.UseCors();
 
 app.MapCityEndpoints();
 app.MapPathEndpoints();
+app.MapURLEndpoints();
 
 app.MapPost("/api/project-updater/update-project", async (ProjectUpdateRequest request, IProjectUpdaterService projectUpdaterService) =>
 {
